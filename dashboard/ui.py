@@ -1,4 +1,3 @@
-# Suggested file: ./dashboard/ui.py
 # Streamlit rendering functions for dashboard sections and page layout.
 
 import streamlit as st
@@ -48,6 +47,7 @@ def render_dataset_overview():
 
 # fits in ./dashboard/ui.py
 def render_performance_section(df):
+    df = df[~df["acc_mean"].isna()]
     st.header("1. Performance")
     st.subheader("A. Cross-Validation Performance (Mean Across Folds)")
     colA, colB = st.columns(2)
@@ -55,10 +55,12 @@ def render_performance_section(df):
     with colA:
         fig = build_bar_chart(df, "name", "acc_mean", "type", "CV Mean Accuracy by Model", HIGH_CONTRAST_PALETTE, y_range=[0.5, 1.0])
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Displays the average cross-validation accuracy across folds for each model. Higher values indicate better and more consistent predictive performance.")
 
     with colB:
         fig = build_bar_chart(df, "name", "kappa_mean", "type", "CV Mean Kappa by Model", HIGH_CONTRAST_PALETTE, y_range=[0.3, 1.0])
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Shows the mean Cohen's Kappa across CV folds per model — useful for assessing agreement beyond chance in multi-class predictions.")
 
     st.subheader("B. Final Holdout Test Performance")
     colA2, colB2 = st.columns(2)
@@ -66,10 +68,12 @@ def render_performance_section(df):
     with colA2:
         fig = build_bar_chart(df, "name", "test_acc", "type", "Final Test Accuracy by Model", HIGH_CONTRAST_PALETTE, y_range=[0.5, 1.0])
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Final holdout test accuracy for each model on the untouched test set. This reflects real-world expected performance.")
 
     with colB2:
         fig = build_bar_chart(df, "name", "test_kappa", "type", "Final Test Kappa by Model", HIGH_CONTRAST_PALETTE, y_range=[0.3, 1.0])
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Final Cohen's Kappa on the holdout test set, indicating agreement between predictions and labels beyond chance on unseen data.")
 
     return {
         "cv_acc": build_bar_chart(df, "name", "acc_mean", "type", "CV Mean Accuracy by Model", HIGH_CONTRAST_PALETTE, y_range=[0.5, 1.0]),
@@ -81,7 +85,7 @@ def render_performance_section(df):
 
 # fits in ./dashboard/ui.py
 def render_stability_section(df):
-    st.header("2. Model Stability and Generalization")
+    st.header("2. Models Stability")
     colC, colD = st.columns(2)
 
     with colC:
@@ -97,6 +101,7 @@ def render_stability_section(df):
         )
         style_figure(fig, y_range=[0.5, 1.0])
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Compares cross-validation mean accuracy to final test accuracy per model to highlight generalization gaps; large differences may indicate overfitting.")
 
     with colD:
         fig = build_scatter_chart(
@@ -111,11 +116,12 @@ def render_stability_section(df):
         )
         fig.update_layout(xaxis_title="Accuracy Std Dev (Lower is Better)")
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Plots CV accuracy standard deviation versus mean to show 'risk vs reward' — models with low std and high mean are preferable.")
 
 
 # fits in ./dashboard/ui.py
 def render_indepth_section(df):
-    st.header("3. In-Depth Analysis")
+    st.header("3. Models Generalization")
     colE, colF = st.columns(2)
 
     with colE:
@@ -132,6 +138,7 @@ def render_indepth_section(df):
         )
         style_figure(fig)
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Boxplots of per-fold accuracies for each model. Wider distributions indicate more variability across folds, while narrow boxes show stability.")
 
     with colF:
         df_copy = df.copy()
@@ -147,20 +154,22 @@ def render_indepth_section(df):
             paper_bgcolor=DEFAULT_BG,
         )
         st.plotly_chart(fig, width="stretch")
+        st.markdown("Shows the optimism bias: the gap between the best CV fold accuracy and the final test accuracy. Positive drops suggest over-optimistic CV estimates.")
 
     return fig
 
 
 # fits in ./dashboard/ui.py
 def render_model_inspection(df, architectures):
-    st.header("4. Model Inspection & Architecture")
-    st.markdown("Select a model to view its multi-class ROC curve and the exact Python code used to compile it.")
+    st.header("4. Models Architectures")
+    st.markdown("Select a model to view the model family, final test accuracy, and the exact Python code used to compile it.")
 
     available_models = df["name"].tolist()
     selected_model = st.selectbox("Choose Model to Inspect:", available_models)
     selected_row = df[df["name"] == selected_model].iloc[0]
 
     st.info(f"**{selected_model}**\n - Family: {selected_row['type']}\n - Final Test Acc: {selected_row['test_acc']:.3f}")
+
     st.subheader("Source Code")
 
     model_code = architectures.get(selected_model)
@@ -175,7 +184,7 @@ def render_export_section(charts):
     st.header("5. Export Images")
     st.markdown("Download high-resolution, print-ready PNGs of all dashboard charts.")
 
-    if st.button("Generate High-Res Images"):
+    if st.button("Export Charts"):
         with st.spinner("Saving high-resolution images... This might take a few seconds."):
             try:
                 export_chart_images(charts)

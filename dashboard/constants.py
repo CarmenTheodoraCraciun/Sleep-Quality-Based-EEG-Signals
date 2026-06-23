@@ -1,4 +1,3 @@
-# Suggested file: ./dashboard/constants.py
 # Shared dashboard configuration values, palettes, and file path constants.
 
 from pathlib import Path
@@ -11,6 +10,8 @@ COLOR_PALETTE = [
     "#CCBB44",  # Goldenrod
     "#33BBEE",  # Cyan
 ]
+
+MODELS_PATH = './best_models_results/'
 
 HIGH_CONTRAST_PALETTE = [COLOR_PALETTE[0], COLOR_PALETTE[1], COLOR_PALETTE[2]]
 DEFAULT_BG = "white"

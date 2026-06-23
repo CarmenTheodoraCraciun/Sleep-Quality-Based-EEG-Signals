@@ -1,4 +1,3 @@
-# Suggested file: ./dashboard/data.py
 # Data parsing and loading helpers used by the dashboard.
 
 import ast
@@ -23,19 +22,6 @@ def parse_literal_list(value):
 
 
 # fits in ./dashboard/data.py
-def parse_roc_column(value):
-    if pd.isna(value):
-        return {}
-    if isinstance(value, str):
-        try:
-            cleaned = value.replace("array(", "").replace(")", "")
-            return ast.literal_eval(cleaned)
-        except Exception:
-            return {}
-    return value
-
-
-# fits in ./dashboard/data.py
 @st.cache_data
 def load_data(path=DATA_PATH):
     df = pd.read_csv(path)
@@ -43,10 +29,6 @@ def load_data(path=DATA_PATH):
 
     df["fold_accs"] = df["fold_accs"].apply(parse_literal_list)
     df["fold_kappas"] = df["fold_kappas"].apply(parse_literal_list)
-
-    for column in ["roc_fpr", "roc_tpr", "roc_auc"]:
-        if column in df.columns:
-            df[column] = df[column].apply(parse_roc_column)
 
     return df
 

@@ -1,4 +1,3 @@
-# Suggested file: ./dashboard/charts.py
 # Figure-building helper functions used by the dashboard.
 
 import plotly.express as px
@@ -18,7 +17,8 @@ def style_figure(fig, y_range=None, x_reverse=False):
 
 # fits in ./dashboard/charts.py
 def build_bar_chart(df, x, y, color, title, color_sequence, y_range=None):
-    fig = px.bar(df.sort_values(y, ascending=False), x=x, y=y, color=color, title=title, text_auto=".3f", color_discrete_sequence=color_sequence)
+    filtered_df = df.loc[df[y].notna() & (df[y] != 0)].sort_values(y, ascending=False)
+    fig = px.bar(filtered_df, x=x, y=y, color=color, title=title, text_auto=".3f", color_discrete_sequence=color_sequence)
     return style_figure(fig, y_range=y_range)
 
 

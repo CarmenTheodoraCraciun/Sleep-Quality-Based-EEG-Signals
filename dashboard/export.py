@@ -1,11 +1,10 @@
-# Suggested file: ./dashboard/export.py
 # Chart export and figure collection helpers for use by the dashboard.
 
 import os
 
 import plotly.express as px
 
-from charts import build_scatter_chart, style_figure
+from charts import build_bar_chart, build_scatter_chart, style_figure
 from constants import COLOR_PALETTE, EXPORT_FOLDER, HIGH_CONTRAST_PALETTE
 
 # fits in ./dashboard/export.py
@@ -21,6 +20,42 @@ def collect_export_charts(df, optimization_figure):
         "optimism": optimization_figure,
     }
 
+    charts["cv_acc"] = build_bar_chart(
+        df,
+        "name",
+        "acc_mean",
+        "type",
+        "CV Mean Accuracy by Model",
+        HIGH_CONTRAST_PALETTE,
+        y_range=[0.5, 1.0],
+    )
+    charts["cv_kappa"] = build_bar_chart(
+        df,
+        "name",
+        "kappa_mean",
+        "type",
+        "CV Mean Kappa by Model",
+        HIGH_CONTRAST_PALETTE,
+        y_range=[0.3, 1.0],
+    )
+    charts["test_acc"] = build_bar_chart(
+        df,
+        "name",
+        "test_acc",
+        "type",
+        "Final Test Accuracy by Model",
+        HIGH_CONTRAST_PALETTE,
+        y_range=[0.5, 1.0],
+    )
+    charts["test_kappa"] = build_bar_chart(
+        df,
+        "name",
+        "test_kappa",
+        "type",
+        "Final Test Kappa by Model",
+        HIGH_CONTRAST_PALETTE,
+        y_range=[0.3, 1.0],
+    )
     charts["generalization"] = px.bar(
         df[["name", "type", "acc_mean", "test_acc"]]
         .melt(id_vars=["name", "type"], var_name="Metric", value_name="Score"),

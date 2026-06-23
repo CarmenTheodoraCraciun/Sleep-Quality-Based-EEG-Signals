@@ -19,10 +19,8 @@ from ui import (
     render_title,
 )
 
-# This file is the application entrypoint and orchestrates the split modules.
-# It keeps the dashboard flow in one place without holding all helper implementations.
 
-st.set_page_config(page_title="Model Performance", layout="wide")
+st.set_page_config(page_title="Models Performance - Dashboard", layout="wide")
 
 
 def create_dashboard():

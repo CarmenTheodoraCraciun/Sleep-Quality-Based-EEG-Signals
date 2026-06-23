@@ -9,6 +9,7 @@ import time
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, cohen_kappa_score
 from scipy.signal import medfilt, resample
 from tensorflow.keras import layers
+import keras.ops as ops
 
 
 # -- Helper functions for dataset --
@@ -41,12 +42,11 @@ def build_sequences_per_subject(df, feature_cols, label_col='Label', subject_col
             
     return np.array(X_seq), np.array(y_seq), np.array(subj_seq)
 
-
 class SleepDataGenerator(tf.keras.utils.PyDataset):
     def __init__(self, directory, is_training=True,batch_size=32,
         n_classes=5,window_size=3,use_context=False,
         use_lag_lead=False,downsample=False,target_length=1500,
-        sampling_rate=50,lag_seconds=0.5,**kwargs):
+                     sampling_rate=50,lag_seconds=0.5,select_channels=None,**kwargs):
         '''Custom data generator for sleep stage classification.'''
         super().__init__()
         self.directory = directory
@@ -62,7 +62,7 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
         self.target_length = target_length
         self.sampling_rate = sampling_rate
         self.lag_steps = int(lag_seconds * sampling_rate)
-
+        self.select_channels = select_channels
         if self.use_context:
             self.window_size = window_size
         else:
@@ -124,6 +124,10 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
 
         X_batch = self._normalize(X_batch)
         X_batch = self._add_lag_lead(X_batch)
+        
+        if self.select_channels is not None:
+            X_batch = X_batch[..., self.select_channels]
+
         return X_batch, tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes)
 
     def _get_context_batch(self, X, y):
@@ -150,6 +154,10 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
 
         X_batch = self._normalize(X_batch)
         X_batch = self._add_lag_lead(X_batch)
+
+        if self.select_channels is not None:
+            X_batch = X_batch[..., self.select_channels]
+        
         return X_batch, tf.keras.utils.to_categorical(y_batch, num_classes=self.n_classes)
 
     def on_epoch_end(self):
@@ -157,27 +165,33 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
         if self.is_training:
             np.random.shuffle(self.file_list)
 
-## --- Helpers for models --
-def focal_loss(gamma=2.0, alpha=0.25):
-    '''Create a focal loss function with specified gamma and alpha parameters.
-    
-    Parameters:
-      - gamma (float): Focusing parameter that reduces the relative loss for well-classified examples.
-      - alpha (float): Balancing factor that adjusts the importance of positive/negative examples.
+class Attention(layers.Layer):
+    def __init__(self, units):
+        super().__init__()
+        self.W = layers.Dense(units)
+        self.V = layers.Dense(1)
 
-    Returns:
-      - function: A loss function that can be used in model compilation.
-    '''
-    def loss(y_true, y_pred):
-        '''Calculate the focal loss between true labels and predicted probabilities.'''
-        y_true_one_hot = tf.one_hot(tf.cast(y_true, tf.int32), depth=5)
-        y_pred = tf.clip_by_value(y_pred, 1e-7, 1 - 1e-7)
-        ce_term = -y_true_one_hot * tf.math.log(y_pred)
-        p_t = tf.reduce_sum(y_true_one_hot * y_pred, axis=-1)
-        focal_modulator = tf.pow(1. - p_t, gamma)
-        focal_loss_per_class = tf.expand_dims(focal_modulator, axis=-1) * ce_term
-        return tf.reduce_mean(tf.reduce_sum(alpha * focal_loss_per_class, axis=-1))
+    def call(self, inputs):
+        score = self.V(tf.nn.tanh(self.W(inputs)))
+        weights = tf.nn.softmax(score, axis=1)
+        context = tf.reduce_sum(weights * inputs, axis=1)
+        return context
     
+## --- Helpers for models --
+def categorical_focal_loss(gamma=2.0, alpha=None):
+    def loss(y_true, y_pred):
+        y_pred = ops.clip(y_pred, 1e-7, 1.0)
+        ce = -ops.sum(y_true * ops.log(y_pred), axis=-1)
+        p_t = ops.sum(y_true * y_pred, axis=-1)
+        modulating = (1.0 - p_t) ** gamma
+
+        if alpha is not None:
+            alpha_t = ops.sum(y_true * ops.convert_to_tensor(alpha), axis=-1)
+            fl = alpha_t * modulating * ce
+        else:
+            fl = modulating * ce
+
+        return ops.mean(fl)
     return loss
 
 def se_feature_attention(inputs, reduction=8):
@@ -198,11 +212,114 @@ def se_feature_attention(inputs, reduction=8):
 
     return layers.Multiply()([inputs, x])
 
+def compute_transition_matrix_adaptive(y, temps):
+    A = np.ones((5, 5)) * 1e-3
+    for i in range(len(y) - 1):
+        A[y[i], y[i+1]] += 1
+
+    A = A / A.sum(axis=1, keepdims=True)
+
+    # Temperatures per clas
+    for c in range(5):
+        A[c] = A[c] ** temps[c]
+        A[c] = A[c] / A[c].sum()
+
+    return A
+
+def viterbi(proba, A):
+    T, C = proba.shape
+    logA = np.log(A + 1e-12)
+    logP = np.log(np.clip(proba, 1e-8, 1.0))
+
+    delta = np.zeros((T, C))
+    psi = np.zeros((T, C), dtype=int)
+
+    delta[0] = logP[0]
+
+    for t in range(1, T):
+        scores = delta[t-1][:, None] + logA
+        psi[t] = np.argmax(scores, axis=0)
+        delta[t] = np.max(scores, axis=0) + logP[t]
+
+    states = np.zeros(T, dtype=int)
+    states[-1] = np.argmax(delta[-1])
+    for t in range(T - 2, -1, -1):
+        states[t] = psi[t+1, states[t+1]]
+
+    return states
+
+def safe_medfilt(seq, center, k):
+    half = k // 2
+    start = max(0, center - half)
+    end = min(len(seq), center + half + 1)
+    window = seq[start:end]
+    if len(window) < k:
+        k = len(window) if len(window) % 2 == 1 else len(window) - 1
+        if k < 1:
+            return seq[center]
+    return medfilt(window, kernel_size=k)[len(window)//2]
+
+def adaptive_median(seq):
+    out = seq.copy()
+    for i in range(len(seq)):
+        c = seq[i]
+        if c == 1:      # N1
+            out[i] = safe_medfilt(seq, i, 3)
+        elif c == 2:    # N2
+            out[i] = safe_medfilt(seq, i, 5)
+        elif c == 3:    # N3
+            out[i] = safe_medfilt(seq, i, 9)
+        elif c == 4:    # REM
+            out[i] = safe_medfilt(seq, i, 5)
+        else:           # Wake
+            out[i] = safe_medfilt(seq, i, 5)
+    return out
+
+def physiologic_rules(seq):
+    out = seq.copy()
+    for i in range(1, len(seq)-1):
+        prev, cur, nxt = seq[i-1], seq[i], seq[i+1]
+
+        # N1 -> N3 -> N1 => N3 become N2
+        if prev == 1 and cur == 3 and nxt == 1:
+            out[i] = 2
+
+        # REM -> N2 -> REM => N2 become REM
+        if prev == 4 and cur == 2 and nxt == 4:
+            out[i] = 4
+
+        # N1 -> N3 direct => N1 become N2
+        if prev == 1 and nxt == 3 and cur == 1:
+            out[i] = 2
+
+        # N3 -> Wake -> N3 => Wake become N2
+        if prev == 3 and cur == 0 and nxt == 3:
+            out[i] = 2
+
+    return out
+    
 def make_callbacks():
     return [
         tf.keras.callbacks.EarlyStopping(
             monitor='val_accuracy',
             patience=15,
+            restore_best_weights=True,
+            mode="max"
+        ),
+        tf.keras.callbacks.ReduceLROnPlateau(
+            monitor='val_accuracy',
+            factor=0.5,
+            patience=5,
+            min_lr=1e-5,
+            mode='max'
+        )
+    ]
+
+def make_callbacks_seqsleepnet():
+    return [
+        tf.keras.callbacks.EarlyStopping(
+            monitor='val_accuracy',
+            patience=7,
             restore_best_weights=True,
             mode="max"
         ),
@@ -275,6 +392,7 @@ def evaluate_model(y_true, y_pred, class_names=['Wake', 'N1', 'N2', 'N3', 'REM']
       - tuple: Accuracy and Cohen's Kappa score.
     '''
     acc = accuracy_score(y_true, y_pred)
+    kappa = cohen_kappa_score(y_true, y_pred)
     print(f"Accuracy {acc:.4f}\n")
 
     print("--- Classification report ---")
@@ -290,5 +408,5 @@ def evaluate_model(y_true, y_pred, class_names=['Wake', 'N1', 'N2', 'N3', 'REM']
     plt.xlabel('Predicted')
     plt.show()
 
-    print("Cohen's Kappa:", cohen_kappa_score(y_true, y_pred))
+    print(f"Cohen's Kappa: {kappa:.4f}")
     return acc, kappa
