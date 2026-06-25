@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,8 +8,8 @@ import time
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, cohen_kappa_score
 from scipy.signal import medfilt, resample
 from tensorflow.keras import layers
-import keras.ops as ops
-
+import keras
+import tensorflow as tf
 
 # -- Helper functions for dataset --
 def build_sequences_per_subject(df, feature_cols, label_col='Label', subject_col='Subject_ID', seq_len=30, step=5):
@@ -41,6 +40,7 @@ def build_sequences_per_subject(df, feature_cols, label_col='Label', subject_col
             subj_seq.append(subj)
             
     return np.array(X_seq), np.array(y_seq), np.array(subj_seq)
+
 
 class SleepDataGenerator(tf.keras.utils.PyDataset):
     def __init__(self, directory, is_training=True,batch_size=32,
@@ -165,17 +165,27 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
         if self.is_training:
             np.random.shuffle(self.file_list)
 
+@keras.saving.register_keras_serializable(package="utils")
 class Attention(layers.Layer):
-    def __init__(self, units):
-        super().__init__()
+    def __init__(self, units, **kwargs):
+        # AICI e cheia: primește trainable, dtype, name etc.
+        super().__init__(**kwargs)
+        self.units = units
         self.W = layers.Dense(units)
         self.V = layers.Dense(1)
 
     def call(self, inputs):
-        score = self.V(tf.nn.tanh(self.W(inputs)))
-        weights = tf.nn.softmax(score, axis=1)
-        context = tf.reduce_sum(weights * inputs, axis=1)
-        return context
+        score = self.V(keras.activations.tanh(self.W(inputs)))
+        weights = keras.activations.softmax(score, axis=1)
+        context = weights * inputs
+        return tf.reduce_sum(context, axis=1)
+
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"units": self.units})
+        return config
+
     
 ## --- Helpers for models --
 def categorical_focal_loss(gamma=2.0, alpha=None):
@@ -379,34 +389,43 @@ def create_evaluation_table(y_val, y_pred, df_val):
 
   return df_eval
 
-def evaluate_model(y_true, y_pred, class_names=['Wake', 'N1', 'N2', 'N3', 'REM']):
-    '''
-    Evaluate the performance of a classification model.
+def evaluate_model(
+        y_true, 
+        y_pred, 
+        class_names=['Wake', 'N1', 'N2', 'N3', 'REM'],
+        disable_view=True,
+        save_folder=None,
+        model_name=None
+    ):
 
-    Parameters:
-      - y_true (array-like): True labels.
-      - y_pred (array-like): Predicted labels.
-      - class_names (list): List of class names.
-
-    Returns:
-      - tuple: Accuracy and Cohen's Kappa score.
-    '''
     acc = accuracy_score(y_true, y_pred)
     kappa = cohen_kappa_score(y_true, y_pred)
-    print(f"Accuracy {acc:.4f}\n")
 
-    print("--- Classification report ---")
-    print(classification_report(y_true, y_pred, target_names=class_names))
+    if disable_view:
+        cm = confusion_matrix(y_true, y_pred)
+    
+        # Create figure
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+                    xticklabels=class_names, yticklabels=class_names)
+        plt.title(f'Confusion Matrix - {model_name}')
+        plt.ylabel('True')
+        plt.xlabel('Predicted')
+    
+        # Save BEFORE show/close
+        save_path = None
+        if save_folder is not None:
+            os.makedirs(save_folder, exist_ok=True)
+            save_path = os.path.join(save_folder, f"confusion_matrix_{model_name}.png")
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Confusion matrix saved at: {save_path}")
+        
+        print(f"Accuracy: {acc:.4f}")
+        print("--- Classification report ---")
+        print(classification_report(y_true, y_pred, target_names=class_names))
+        plt.show()
+        print(f"Cohen's Kappa: {kappa:.4f}")
 
-    cm = confusion_matrix(y_true, y_pred)
+        return acc, kappa, save_path
 
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=class_names, yticklabels=class_names)
-    plt.title('Confusion Matrix')
-    plt.ylabel('True')
-    plt.xlabel('Predicted')
-    plt.show()
-
-    print(f"Cohen's Kappa: {kappa:.4f}")
     return acc, kappa
