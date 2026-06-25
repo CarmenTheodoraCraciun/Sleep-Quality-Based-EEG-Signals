@@ -1,13 +1,19 @@
-# Chart export and figure collection helpers for use by the dashboard.
-
+# export.py
 import os
+from pathlib import Path
 
 import plotly.express as px
 
-from charts import build_bar_chart, build_scatter_chart, style_figure
+from charts import (
+    build_bar_chart, 
+    build_scatter_chart, 
+    style_figure,
+    build_speed_accuracy_scatter,
+    build_hypnogram_comparison,
+    build_inference_speed_chart
+)
 from constants import COLOR_PALETTE, EXPORT_FOLDER, HIGH_CONTRAST_PALETTE
 
-# fits in ./dashboard/export.py
 def collect_export_charts(df, optimization_figure):
     charts = {
         "cv_acc": None,
@@ -18,6 +24,9 @@ def collect_export_charts(df, optimization_figure):
         "pareto": None,
         "fold_variance": None,
         "optimism": optimization_figure,
+        "speed_accuracy": None,
+        "hypnogram_comparison": None,
+        "inference_benchmark": None,
     }
 
     charts["cv_acc"] = build_bar_chart(
@@ -56,6 +65,8 @@ def collect_export_charts(df, optimization_figure):
         HIGH_CONTRAST_PALETTE,
         y_range=[0.3, 1.0],
     )
+    
+    # Generalization chart
     charts["generalization"] = px.bar(
         df[["name", "type", "acc_mean", "test_acc"]]
         .melt(id_vars=["name", "type"], var_name="Metric", value_name="Score"),
@@ -67,6 +78,8 @@ def collect_export_charts(df, optimization_figure):
         color_discrete_sequence=[COLOR_PALETTE[0], COLOR_PALETTE[4]],
     )
     style_figure(charts["generalization"], y_range=[0.5, 1.0])
+    
+    # Pareto chart
     charts["pareto"] = build_scatter_chart(
         df,
         "acc_std",
@@ -77,6 +90,8 @@ def collect_export_charts(df, optimization_figure):
         HIGH_CONTRAST_PALETTE,
         x_reverse=True,
     )
+    
+    # Fold variance chart
     charts["fold_variance"] = px.box(
         df.explode("fold_accs").rename(columns={"fold_accs": "Fold_Accuracy"}),
         x="name",
@@ -87,28 +102,38 @@ def collect_export_charts(df, optimization_figure):
         color_discrete_sequence=HIGH_CONTRAST_PALETTE,
     )
     style_figure(charts["fold_variance"])
+    
+    # Noi grafice
+    charts["speed_accuracy"] = build_speed_accuracy_scatter(df)
+    charts["hypnogram_comparison"] = build_hypnogram_comparison(df)
+    charts["inference_benchmark"] = build_inference_speed_chart(df)
+    
     return charts
 
-
-# fits in ./dashboard/export.py
 def export_chart_images(charts, export_dir=EXPORT_FOLDER):
     if not os.path.exists(export_dir):
         os.makedirs(export_dir, exist_ok=True)
 
     file_mapping = {
-        "cv_acc": "0a_cv_mean_accuracy.png",
-        "cv_kappa": "0b_cv_mean_kappa.png",
-        "test_acc": "1_test_accuracy.png",
-        "test_kappa": "2_test_kappa.png",
-        "generalization": "3_generalization.png",
-        "pareto": "4_pareto_front.png",
-        "fold_variance": "5_fold_variance.png",
-        "optimism": "6_optimism_bias.png",
+        "cv_acc": "results_cv_mean_accuracy.png",
+        "cv_kappa": "results_cv_mean_kappa.png",
+        "test_acc": "results_test_accuracy.png",
+        "test_kappa": "results_test_kappa.png",
+        "generalization": "results_generalization.png",
+        "pareto": "results_pareto_front.png",
+        "fold_variance": "results_fold_variance.png",
+        "optimism": "results_optimism_bias.png",
+        "speed_accuracy": "results_speed_accuracy_tradeoff.png",
+        "inference_benchmark": "results_inference_benchmark.png",
+        "hypnogram_comparison": "results_hypnogram_comparison.png",
     }
 
     for key, fig in charts.items():
         filename = file_mapping.get(key)
         if filename and fig is not None:
-            fig.write_image(os.path.join(export_dir, filename), scale=4)
+            try:
+                fig.write_image(os.path.join(export_dir, filename), scale=4)
+            except Exception as e:
+                print(f"Error exporting {filename}: {e}")
 
     return export_dir

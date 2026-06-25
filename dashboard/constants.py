@@ -1,7 +1,17 @@
-# Shared dashboard configuration values, palettes, and file path constants.
-
+# constants.py
 from pathlib import Path
 
+# Directorul de bază pentru dashboard
+BASE_DIR = Path(__file__).resolve().parent
+
+# Căile către fișiere
+DATA_PATH = BASE_DIR / "results" / "model_results.csv"
+ARCHITECTURE_PATH = BASE_DIR / "results" / "architectures.json"
+
+# Directorul pentru export
+EXPORT_FOLDER = BASE_DIR.parent / "charts_export"
+
+# Palete de culori
 COLOR_PALETTE = [
     "#0077BB",  # Deep Sky Blue
     "#EE7733",  # Vibrant Orange
@@ -11,14 +21,18 @@ COLOR_PALETTE = [
     "#33BBEE",  # Cyan
 ]
 
-MODELS_PATH = './best_models_results/'
+PERFORMANCE_COLORS = {
+    "Tree-Based": "#0077BB",
+    "DL": "#EE7733",
+    "ANN_Raw": "#009988",
+    "Probabilistic": "#EE3377",
+    "Hybrid": "#CCBB44",
+    "Ensemble": "#33BBEE"
+}
 
 HIGH_CONTRAST_PALETTE = [COLOR_PALETTE[0], COLOR_PALETTE[1], COLOR_PALETTE[2]]
 DEFAULT_BG = "white"
 DEFAULT_FONT_COLOR = "black"
 
-# Resolve data file locations relative to the dashboard package location.
-BASE_DIR = Path(__file__).resolve().parent
-DATA_PATH = BASE_DIR / "results" / "model_results.csv"
-ARCHITECTURE_PATH = BASE_DIR / "results" / "architectures.json"
-EXPORT_FOLDER = Path(__file__).resolve().parent.parent / "charts_export"
+# Calea către modele (dacă este necesar)
+MODELS_PATH = BASE_DIR.parent / "best_models_results"
