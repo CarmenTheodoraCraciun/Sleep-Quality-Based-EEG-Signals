@@ -1,5 +1,4 @@
-best_models_results/
 charts_export/
-diagrams/
-models_architecure/
+dashboard/results/
+best_models.zip
 gemini_prompts.txt
