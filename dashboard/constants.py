@@ -1,17 +1,12 @@
-# constants.py
 from pathlib import Path
 
-# Directorul de bază pentru dashboard
 BASE_DIR = Path(__file__).resolve().parent
 
-# Căile către fișiere
 DATA_PATH = BASE_DIR / "results" / "model_results.csv"
 ARCHITECTURE_PATH = BASE_DIR / "results" / "architectures.json"
 
-# Directorul pentru export
 EXPORT_FOLDER = BASE_DIR.parent / "charts_export"
 
-# Palete de culori
 COLOR_PALETTE = [
     "#0077BB",  # Deep Sky Blue
     "#EE7733",  # Vibrant Orange
@@ -34,5 +29,4 @@ HIGH_CONTRAST_PALETTE = [COLOR_PALETTE[0], COLOR_PALETTE[1], COLOR_PALETTE[2]]
 DEFAULT_BG = "white"
 DEFAULT_FONT_COLOR = "black"
 
-# Calea către modele (dacă este necesar)
 MODELS_PATH = BASE_DIR.parent / "best_models_results"

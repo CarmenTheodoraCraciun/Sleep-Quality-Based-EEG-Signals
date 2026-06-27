@@ -1,4 +1,3 @@
-# export.py
 import os
 from pathlib import Path
 
@@ -66,7 +65,6 @@ def collect_export_charts(df, optimization_figure):
         y_range=[0.3, 1.0],
     )
     
-    # Generalization chart
     charts["generalization"] = px.bar(
         df[["name", "type", "acc_mean", "test_acc"]]
         .melt(id_vars=["name", "type"], var_name="Metric", value_name="Score"),
@@ -79,7 +77,6 @@ def collect_export_charts(df, optimization_figure):
     )
     style_figure(charts["generalization"], y_range=[0.5, 1.0])
     
-    # Pareto chart
     charts["pareto"] = build_scatter_chart(
         df,
         "acc_std",
@@ -91,7 +88,6 @@ def collect_export_charts(df, optimization_figure):
         x_reverse=True,
     )
     
-    # Fold variance chart
     charts["fold_variance"] = px.box(
         df.explode("fold_accs").rename(columns={"fold_accs": "Fold_Accuracy"}),
         x="name",
@@ -103,7 +99,6 @@ def collect_export_charts(df, optimization_figure):
     )
     style_figure(charts["fold_variance"])
     
-    # Noi grafice
     charts["speed_accuracy"] = build_speed_accuracy_scatter(df)
     charts["hypnogram_comparison"] = build_hypnogram_comparison(df)
     charts["inference_benchmark"] = build_inference_speed_chart(df)

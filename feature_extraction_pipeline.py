@@ -14,9 +14,9 @@ EEG_BANDS = {
     'Beta': (16, 30)
 }
 
-# -----------------------------
+# ============================
 # 1. Artifact removal
-# -----------------------------
+# ============================
 def remove_artifacts_raw(x, sf=100):
     cleaned = []
     for epoch in x:
@@ -29,9 +29,9 @@ def remove_artifacts_raw(x, sf=100):
         cleaned.append(e)
     return np.array(cleaned)
 
-# -----------------------------
+# ============================
 # 2. Spindles
-# -----------------------------
+# ============================
 def detect_spindles_raw(x, sf=100):
     b, a = butter(4, [11/(sf/2), 16/(sf/2)], btype='band')
     spindle_events = []
@@ -61,9 +61,9 @@ def spindle_features_for_epoch(events, sf=100):
     durations = [(e[1]-e[0])/sf for e in events]
     return [count, np.mean(durations)]
 
-# -----------------------------
+# ============================
 # 3. Slow waves
-# -----------------------------
+# ============================
 def detect_slow_waves_raw(x, sf=100):
     b, a = butter(4, [0.5/(sf/2), 2/(sf/2)], btype='band')
     slow_events = []
@@ -88,9 +88,9 @@ def slow_wave_features_for_epoch(events):
     amps = [e[2] for e in events]
     return [len(events), np.mean(amps)]
 
-# -----------------------------
+# ============================
 # 4. Time, PSD, Hjorth, etc.
-# -----------------------------
+# ============================
 def extract_time_features(epoch):
     mean_val = np.mean(epoch)
     std_val = np.std(epoch)
@@ -146,9 +146,9 @@ def extract_features(epoch):
     features.extend(extract_spectral_fine_structure(freqs, psd))
     return features
 
-# -----------------------------
+# ============================
 # 5. Normalize & Temporal features one file
-# -----------------------------
+# ============================
 
 def normalize_by_subject(df, feature_cols):
     df_norm = df.copy()
@@ -183,9 +183,9 @@ def extract_enhanced_temporal_features(df):
     return df_final
 
     
-# -----------------------------
+# ============================
 # 6. Process one file
-# -----------------------------
+# ============================
 def process_single_npz(npz_path):
     data = np.load(npz_path)
     X = data["x"]      # (epochs, 3000, 1)

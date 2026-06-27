@@ -1,5 +1,3 @@
-# Streamlit rendering functions for dashboard sections and page layout.
-
 from pathlib import Path
 import streamlit as st
 import plotly.express as px
@@ -10,12 +8,10 @@ from charts import build_bar_chart, build_scatter_chart, style_figure
 from constants import COLOR_PALETTE, EXPORT_FOLDER, HIGH_CONTRAST_PALETTE, DEFAULT_BG, DEFAULT_FONT_COLOR
 from export import export_chart_images
 
-# ui.py - add these new functions
 from charts import (
     build_speed_accuracy_scatter, 
     build_hypnogram_comparison,
     build_inference_speed_chart,
-    build_performance_card_metrics
 )
         
 def render_hypnogram_discrepancy_section(df):
@@ -35,46 +31,6 @@ def render_hypnogram_discrepancy_section(df):
     - **Tree-based models** (XGB, LGBM) excel on hypnogram, reaching 80-82%
     - **CNN** shows consistent performance across both metrics
     """)
-
-# ui.py - înlocuiește funcțiile existente cu acestea
-
-# def render_speed_efficiency_section(df):
-#     """Section 4: Speed vs Accuracy trade-off"""
-#     st.header("4. Speed vs Accuracy Trade-off")
-#     st.markdown("""
-#     In real-time clinical applications, inference speed is as important as accuracy. 
-#     This plot helps identify the "sweet spot" models that balance both metrics.
-#     """)
-    
-#     fig = build_speed_accuracy_scatter(df)
-#     st.plotly_chart(fig, width="stretch")
-    
-#     st.markdown("""
-#     **Key Insights:**
-#     - **Sweet Spot Models**: Look for points in the top-left quadrant (fast & accurate)
-#     - **Ensemble Models**: The LSTM_ResNet ensemble achieves excellent accuracy in just 0.38s
-#     - **Hybrid Models**: SSN provides great hypnogram accuracy but at a significant speed cost (98s)
-#     """)
-
-# def render_inference_benchmark_section(df):
-#     """Section 5: Inference Speed Benchmark"""
-#     st.header("5. Inference Speed Benchmark")
-#     st.markdown("""
-#     For deployment decisions, inference speed is critical. The red dashed line shows 
-#     a 10-second acceptable time budget for clinical applications.
-#     """)
-    
-#     fig = build_inference_speed_chart(df)
-#     st.plotly_chart(fig, width="stretch")
-    
-#     st.markdown("""
-#     **Deployment Recommendations:**
-#     - **Wearable Devices (< 1s)**: LSTM_ResNet, CNN, XGB
-#     - **Server Processing (< 10s)**: Most models except SSN
-#     - **Research/Batch Processing**: SSN (98s) for maximum hypnogram accuracy
-#     """)
-
-# ui.py - elimină secțiunea de summary din render_speed_and_benchmark_sections
 
 def render_speed_and_benchmark_sections(df):
     """Combine Section 4 and Section 6 in two columns"""
@@ -122,17 +78,14 @@ def render_model_details_section(df, architectures):
     Select a model to view its complete performance profile, confusion matrix, 
     hypnogram visualization.
     """)
-    
-    available_models = df["name"].tolist()
-    selected_model = st.selectbox("Choose Model to Inspect:", available_models)
-    selected_row = df[df["name"] == selected_model].iloc[0].to_dict()
-    
-    # Prima coloană: Metrici și detalii
-    # A doua coloană: Confusion Matrix
+
     col1, col2 = st.columns(2)
     
     with col1:
-        # Model metrics
+        available_models = df["name"].tolist()
+        selected_model = st.selectbox("Choose Model to Inspect:", available_models)
+        selected_row = df[df["name"] == selected_model].iloc[0].to_dict()
+ 
         st.subheader("Performance Metrics")
         col_metrics1, col_metrics2 = st.columns(2)
         with col_metrics1:
@@ -142,11 +95,9 @@ def render_model_details_section(df, architectures):
             st.metric("Hypnogram Accuracy", f"{selected_row['hypno_acc']:.3f}")
             st.metric("CV Stability (Std)", f"{selected_row['acc_std']:.3f}")
         
-        # Model details - AFIȘEAZĂ full_name în detalii
         st.subheader("Model Details")
         full_name = selected_row.get('full_name', selected_model)
         st.info(f"""
-        **{selected_model}**
         - **Full Name**: {full_name}
         - **Family**: {selected_row['type']}
         - **Test Kappa**: {selected_row['test_kappa']:.3f}
@@ -166,7 +117,6 @@ def render_model_details_section(df, architectures):
         else:
             st.warning("Confusion matrix path not available")
     
-    # La final, hipnograma pe toată lățimea
     st.divider()
     st.subheader(f"Hypnogram Visualization - {selected_model}")
     hypno_path = selected_row.get("hypno_path")
@@ -181,8 +131,6 @@ def render_model_details_section(df, architectures):
 
 def render_performance_overview(df):
     """Render all 7 metric cards on the same row"""
-    
-    # Extrage valorile ca dicționare
     fastest = df.loc[df["gen_time"].idxmin()].to_dict()
     best_acc = df.loc[df["test_acc"].idxmax()].to_dict()
     
@@ -194,15 +142,13 @@ def render_performance_overview(df):
     best_hypno = df.loc[df["hypno_acc"].idxmax()].to_dict()
     fastest_inf = df.loc[df["gen_time"].idxmin()].to_dict()
     most_stable = df.loc[df["acc_std"].idxmin()].to_dict()
-    
-    # 7 coloane pe același rând
+
     cols = st.columns(7, gap="small")
     
-    # Card 1: Fastest Model
     with cols[0]:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="label">⚡ Fastest Model</div>
+            <div class="label">Fastest Model</div>
             <div class="value highlight-teal">{fastest['gen_time']:.3f}s</div>
             <div class="model">{fastest['name']}</div>
             <div class="sub">{fastest['type']} · Test Acc: {fastest['test_acc']:.3f}</div>
@@ -213,7 +159,7 @@ def render_performance_overview(df):
     with cols[1]:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="label">🎯 Best Accuracy</div>
+            <div class="label">Best Accuracy</div>
             <div class="value highlight-red">{best_acc['test_acc']:.3f}</div>
             <div class="model">{best_acc['name']}</div>
             <div class="sub">{best_acc['type']} · Time: {best_acc['gen_time']:.3f}s</div>
@@ -224,14 +170,13 @@ def render_performance_overview(df):
     with cols[2]:
         st.markdown(f"""
         <div class="metric-card">
-            <div class="label">🏆 Best Efficiency</div>
+            <div class="label">Best Efficiency</div>
             <div class="value highlight-sky">{best_ratio['acc_per_sec']:.2f}</div>
             <div class="model">{best_ratio['name']}</div>
             <div class="sub">{best_ratio['type']} · Acc/s</div>
         </div>
         """, unsafe_allow_html=True)
     
-    # Card 4: Best Test Accuracy (Leaderboard)
     with cols[3]:
         st.markdown(f"""
         <div class="metric-card">
@@ -242,7 +187,6 @@ def render_performance_overview(df):
         </div>
         """, unsafe_allow_html=True)
     
-    # Card 5: Best Hypnogram
     with cols[4]:
         st.markdown(f"""
         <div class="metric-card">
@@ -253,7 +197,6 @@ def render_performance_overview(df):
         </div>
         """, unsafe_allow_html=True)
     
-    # Card 6: Fastest Inference
     with cols[5]:
         st.markdown(f"""
         <div class="metric-card">
@@ -264,7 +207,6 @@ def render_performance_overview(df):
         </div>
         """, unsafe_allow_html=True)
     
-    # Card 7: Most Stable (CV)
     with cols[6]:
         st.markdown(f"""
         <div class="metric-card">
@@ -275,13 +217,11 @@ def render_performance_overview(df):
         </div>
         """, unsafe_allow_html=True)    
 
-# fits in ./dashboard/ui.py
 def render_title():
     st.title("Machine Learning Systems for Sleep Quality Assessment Based on EEG Signals")
     st.markdown("## Model Performance Dashboard\n\n**Author**: Carmen-Theodora Craciun")
 
 
-# fits in ./dashboard/ui.py
 def render_leaderboard(df):
     best_acc_row = df.loc[df["test_acc"].idxmax()]
     best_kappa_row = df.loc[df["test_kappa"].idxmax()]
@@ -293,8 +233,6 @@ def render_leaderboard(df):
     cols[2].metric("Total Models Evaluated", len(df))
     cols[3].metric("Model Families", len(df["type"].unique()))
 
-
-# fits in ./dashboard/ui.py
 def render_dataset_overview():
     st.subheader("Dataset Demographics")
     total_subjects = 372
@@ -311,8 +249,6 @@ def render_dataset_overview():
     cols[3].metric("Validation Set", val_count, "15% Split", delta_color="off")
     cols[4].metric("Holdout Test Set", test_count, "15% Split", delta_color="off")
 
-
-# fits in ./dashboard/ui.py
 def render_performance_section(df):
     df = df[~df["acc_mean"].isna()]
     st.header("1. Performance")
@@ -349,8 +285,6 @@ def render_performance_section(df):
         "test_kappa": build_bar_chart(df, "name", "test_kappa", "type", "Final Test Kappa by Model", HIGH_CONTRAST_PALETTE, y_range=[0.3, 1.0]),
     }
 
-
-# fits in ./dashboard/ui.py
 def render_stability_section(df):
     st.header("2. Models Stability")
     colC, colD = st.columns(2)
@@ -385,8 +319,6 @@ def render_stability_section(df):
         st.plotly_chart(fig, width="stretch")
         st.markdown("Plots CV accuracy standard deviation versus mean to show 'risk vs reward' — models with low std and high mean are preferable.")
 
-
-# fits in ./dashboard/ui.py
 def render_indepth_section(df):
     st.header("3. Models Generalization")
     colE, colF = st.columns(2)

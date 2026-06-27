@@ -3,9 +3,6 @@ import plotly.graph_objects as go
 import numpy as np
 from constants import DEFAULT_BG, DEFAULT_FONT_COLOR, PERFORMANCE_COLORS
 
-# charts.py - adaugă la început
-
-# Dicționar pentru maparea numelor prescurtate la nume complete
 MODEL_FULL_NAMES = {
     "LGBM": "LightGBM",
     "XGB": "XGBoost",
@@ -111,17 +108,16 @@ def build_inference_speed_chart(df):
     """Horizontal bar chart for inference speed - compact version"""
     df_sorted = df.sort_values("gen_time", ascending=True)
     
-    # Culori pentru bare (verde pentru rapid, roșu pentru lent)
     colors = []
     for _, row in df_sorted.iterrows():
         if row["gen_time"] < 1:
-            colors.append("#00CC96")  # Verde - foarte rapid
+            colors.append("#00CC96")
         elif row["gen_time"] < 5:
-            colors.append("#1f77b4")  # Albastru - rapid
+            colors.append("#1f77b4")
         elif row["gen_time"] < 10:
-            colors.append("#ff7f0e")  # Portocaliu - mediu
+            colors.append("#ff7f0e")
         else:
-            colors.append("#d62728")  # Roșu - lent
+            colors.append("#d62728")
     
     fig = go.Figure(go.Bar(
         y=df_sorted["name"],
@@ -135,7 +131,6 @@ def build_inference_speed_chart(df):
         customdata=np.column_stack([df_sorted["test_acc"], df_sorted["hypno_acc"]])
     ))
     
-    # Adaugă linia pentru bugetul de timp (10 secunde)
     fig.add_vline(
         x=10, 
         line_dash="dash", 
@@ -146,23 +141,6 @@ def build_inference_speed_chart(df):
         annotation_font_size=10
     )
     
-    # Adaugă etichete pentru categorii
-    # fig.add_annotation(
-    #     x=0.5,
-    #     y=len(df_sorted) - 0.5,
-    #     text="Fast",
-    #     showarrow=False,
-    #     font=dict(size=11, color="#000000", weight="bold")
-    # )
-    
-    # fig.add_annotation(
-    #     x=50,
-    #     y=0.5,
-    #     text="Slow",
-    #     showarrow=False,
-    #     font=dict(size=11, color="#000000", weight="bold")
-    # )
-    
     fig.update_layout(
         title=dict(
             text="Inference Speed Benchmark (Fastest to Slowest)",
@@ -170,13 +148,13 @@ def build_inference_speed_chart(df):
         ),
         xaxis_title="Generation Time (seconds)",
         yaxis_title="",
-        height=400,  # Înălțime fixă mai mică
+        height=400, 
         showlegend=False,
         xaxis=dict(
             type="log",
             gridcolor="lightgray",
-            tickformat=".0f",  # Formatare mai curată
-            range=[-0.5, 2.5],  # Range logaritmic pentru a reduce spațiul alb
+            tickformat=".0f",
+            range=[-0.5, 2.5],
             dtick=1,
             tickvals=[0.1, 1, 10, 100],
             ticktext=["0.1", "1", "10", "100"]
@@ -186,7 +164,7 @@ def build_inference_speed_chart(df):
             categoryorder="total ascending",
             tickfont=dict(size=11)
         ),
-        margin=dict(l=100, r=80, t=50, b=30),  # Margini mai mici
+        margin=dict(l=100, r=80, t=50, b=30),
         plot_bgcolor="white",
         paper_bgcolor="white",
         font=dict(color="black")
@@ -232,7 +210,6 @@ def build_performance_card_metrics(df):
     
     return metrics
 
-# fits in ./dashboard/charts.py
 def style_figure(fig, y_range=None, x_reverse=False):
     if y_range is not None:
         fig.update_layout(yaxis_range=y_range)
@@ -242,14 +219,12 @@ def style_figure(fig, y_range=None, x_reverse=False):
     return fig
 
 
-# fits in ./dashboard/charts.py
 def build_bar_chart(df, x, y, color, title, color_sequence, y_range=None):
     filtered_df = df.loc[df[y].notna() & (df[y] != 0)].sort_values(y, ascending=False)
     fig = px.bar(filtered_df, x=x, y=y, color=color, title=title, text_auto=".3f", color_discrete_sequence=color_sequence)
     return style_figure(fig, y_range=y_range)
 
 
-# fits in ./dashboard/charts.py
 def build_scatter_chart(df, x, y, color, text, title, color_sequence, x_reverse=False):
     fig = px.scatter(df, x=x, y=y, color=color, text=text, title=title, color_discrete_sequence=color_sequence)
     fig.update_traces(textposition="top center", marker=dict(size=12))

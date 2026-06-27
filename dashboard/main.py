@@ -1,4 +1,3 @@
-# main.py
 import sys
 from pathlib import Path
 import pandas as pd
@@ -14,20 +13,17 @@ from ui import (
     render_dataset_overview,
     render_export_section,
     render_indepth_section,
-    # render_leaderboard,  # Comentat - nu mai e folosit
-    # render_model_inspection,  # ELIMINAT - nu mai e folosit
     render_performance_section,
     render_stability_section,
     render_title,
     render_speed_and_benchmark_sections,
     render_hypnogram_discrepancy_section,
-    render_model_details_section,  # Asta e cea nouă
+    render_model_details_section,
 )
 
 
 st.set_page_config(page_title="Models Performance - Dashboard", layout="wide")
 
-# Custom CSS
 st.markdown("""
 <style>
     .main > div {
@@ -115,7 +111,6 @@ st.markdown("""
 def render_performance_overview(df):
     """Render all 7 metric cards on the same row"""
     
-    # Calculează metricile pentru Top Performers
     fastest = df.loc[df["gen_time"].idxmin()]
     best_kappa = df.loc[df["test_kappa"].idxmax()]
     best_acc = df.loc[df["test_acc"].idxmax()]
@@ -124,13 +119,11 @@ def render_performance_overview(df):
     df_copy["acc_per_sec"] = df_copy["test_acc"] / df_copy["gen_time"]
     best_ratio = df_copy.loc[df_copy["acc_per_sec"].idxmax()]
     
-    # Metricile pentru Leaderboard
     best_test = df.loc[df["test_acc"].idxmax()]
     best_hypno = df.loc[df["hypno_acc"].idxmax()]
     fastest_inf = df.loc[df["gen_time"].idxmin()]
     most_stable = df.loc[df["acc_std"].idxmin()]
     
-    # 7 coloane pe același rând
     cols = st.columns(6, gap="small")
     
     # Card 1: Fastest Model
@@ -203,42 +196,32 @@ def create_dashboard():
     df = load_data()
     architectures = load_architectures()
     
-    # Title
     render_title()
     
-    # Toate cele 7 carduri pe același rând
     render_performance_overview(df)
     st.divider()
     
-    # Dataset overview
     render_dataset_overview()
     st.divider()
     
-    # Performance metrics
     charts = render_performance_section(df)
     st.divider()
     
-    # Model stability
     render_stability_section(df)
     st.divider()
     
-    # Generalization analysis
     optimization_figure = render_indepth_section(df)
     st.divider()
     
-    # Speed & Benchmark - combinat
     render_speed_and_benchmark_sections(df)
     st.divider()
     
-    # Hypnogram discrepancy
     render_hypnogram_discrepancy_section(df)
     st.divider()
     
-    # Model deep dive - ACEASTA ESTE NOUA SECȚIUNE (înlocuiește render_model_inspection)
     render_model_details_section(df, architectures)
     st.divider()
     
-    # Export section
     charts.update(collect_export_charts(df, optimization_figure))
     render_export_section(charts)
 

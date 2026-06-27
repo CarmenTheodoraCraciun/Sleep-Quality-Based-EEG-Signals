@@ -1,46 +1,22 @@
+# ============================
+# Imports
+# ============================
 import os
+import time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import tensorflow as tf
-import time
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, cohen_kappa_score
 from scipy.signal import medfilt, resample
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, cohen_kappa_score
+import tensorflow as tf
 from tensorflow.keras import layers
 import keras
-import tensorflow as tf
+from keras import ops
 
-# -- Helper functions for dataset --
-def build_sequences_per_subject(df, feature_cols, label_col='Label', subject_col='Subject_ID', seq_len=30, step=5):
-    '''
-    Build sequences of features and labels for each subject in the DataFrame.
-    
-    Parameters:
-      - df (pd.DataFrame): Input DataFrame containing features, labels, and subject IDs
-      - feature_cols (list): List of column names to be used as features.
-      - label_col (str): Column name for the labels.
-      - subject_col (str): Column name for the subject IDs.
-      - seq_len (int): Length of the sequences to be created.
-      - step (int): Step size for moving the window to create sequences.
-    
-    Returns:
-      - X_seq (np.array): Array of feature sequences.
-    '''
-    X_seq, y_seq, subj_seq = [], [], []
-    
-    for subj, group in df.groupby(subject_col):
-        group = group.sort_index()
-        feats = group[feature_cols].values
-        labels = group[label_col].values
-        
-        for i in range(0, len(feats) - seq_len, step):
-            X_seq.append(feats[i:i+seq_len])
-            y_seq.append(labels[i+seq_len-1])
-            subj_seq.append(subj)
-            
-    return np.array(X_seq), np.array(y_seq), np.array(subj_seq)
-
+# ============================
+# Custom Data Generator for Sleep Stage Classification
+# ============================
 
 class SleepDataGenerator(tf.keras.utils.PyDataset):
     def __init__(self, directory, is_training=True,batch_size=32,
@@ -165,6 +141,10 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
         if self.is_training:
             np.random.shuffle(self.file_list)
 
+# ============================
+# Attention & Loss Functions
+# ============================
+
 @keras.saving.register_keras_serializable(package="utils")
 class Attention(layers.Layer):
     def __init__(self, units, **kwargs):
@@ -185,9 +165,7 @@ class Attention(layers.Layer):
         config = super().get_config()
         config.update({"units": self.units})
         return config
-
     
-## --- Helpers for models --
 def categorical_focal_loss(gamma=2.0, alpha=None):
     def loss(y_true, y_pred):
         y_pred = ops.clip(y_pred, 1e-7, 1.0)
@@ -204,6 +182,9 @@ def categorical_focal_loss(gamma=2.0, alpha=None):
         return ops.mean(fl)
     return loss
 
+# ============================
+# Squeeze-and-Excitation (SE)
+# ============================
 def se_feature_attention(inputs, reduction=8):
     '''
     Apply Squeeze-and-Excitation (SE) feature attention mechanism to the input tensor.
@@ -222,6 +203,9 @@ def se_feature_attention(inputs, reduction=8):
 
     return layers.Multiply()([inputs, x])
 
+# ============================
+# HMM & Viterbi Functions
+# ============================
 def compute_transition_matrix_adaptive(y, temps):
     A = np.ones((5, 5)) * 1e-3
     for i in range(len(y) - 1):
@@ -258,6 +242,9 @@ def viterbi(proba, A):
 
     return states
 
+# ============================
+# Median Filters & Physiological Rules
+# ============================
 def safe_medfilt(seq, center, k):
     half = k // 2
     start = max(0, center - half)
@@ -308,6 +295,9 @@ def physiologic_rules(seq):
 
     return out
     
+# ============================
+# Callbacks
+# ============================
 def make_callbacks():
     return [
         tf.keras.callbacks.EarlyStopping(
@@ -342,6 +332,10 @@ def make_callbacks_seqsleepnet():
         )
     ]
 
+
+# ============================
+# Training Function
+# ============================
 def train_model(model, X_train, y_train, X_val, sample_weight=None):
     '''
     Train and validate a machine learning model.
@@ -365,6 +359,10 @@ def train_model(model, X_train, y_train, X_val, sample_weight=None):
 
     return model.predict(X_val)
 
+
+# ============================
+# Evaluation Functions
+# ============================
 def create_evaluation_table(y_val, y_pred, df_val):
   '''
   Create a table to evaluate the model's performance.
@@ -417,7 +415,7 @@ def evaluate_model(
         if save_folder is not None:
             os.makedirs(save_folder, exist_ok=True)
             save_path = os.path.join(save_folder, f"confusion_matrix_{model_name}.png")
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path,cl dpi=300, bbox_inches='tight')
             print(f"Confusion matrix saved at: {save_path}")
         
         print(f"Accuracy: {acc:.4f}")
