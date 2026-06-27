@@ -1,8 +1,3 @@
-Got it — you want a clean, academic‑style README without emojis, and with a complete, cohesive structure that reads like a professional thesis repository.  
-Here’s a refined version that keeps your tone and content but improves flow, consistency, and formatting clarity:
-
----
-
 # Sleep Quality Assessment Using EEG Signals
 
 This repository implements a complete machine learning and deep learning pipeline for **sleep stage classification and sleep quality assessment** using EEG signals.  
