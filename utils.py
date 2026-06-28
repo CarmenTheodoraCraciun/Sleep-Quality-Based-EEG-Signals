@@ -489,7 +489,7 @@ def evaluate_model(
         if save_folder is not None:
             os.makedirs(save_folder, exist_ok=True)
             save_path = os.path.join(save_folder, f"confusion_matrix_{model_name}.png")
-            plt.savefig(save_path,cl dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"Confusion matrix saved at: {save_path}")
         
         print(f"Accuracy: {acc:.4f}")
