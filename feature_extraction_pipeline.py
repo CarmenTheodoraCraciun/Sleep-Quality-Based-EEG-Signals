@@ -18,6 +18,13 @@ EEG_BANDS = {
 # 1. Artifact removal
 # ============================
 def remove_artifacts_raw(x, sf=100):
+    '''Remove artifacts from EEG epochs using high-pass filtering and clipping based on standard deviation.
+    Parameters:
+      - x (np.ndarray): Input EEG epochs of shape (n_epochs, n_samples).
+      - sf (int): Sampling frequency of the EEG signal.
+    Returns:
+      - np.ndarray: Cleaned EEG epochs after artifact removal.
+    '''
     cleaned = []
     for epoch in x:
         e = epoch.copy()
@@ -33,6 +40,13 @@ def remove_artifacts_raw(x, sf=100):
 # 2. Spindles
 # ============================
 def detect_spindles_raw(x, sf=100):
+    '''Detect sleep spindles in EEG epochs using band-pass filtering and envelope thresholding.
+    Parameters:
+      - x (np.ndarray): Input EEG epochs of shape (n_epochs, n_samples).
+      - sf (int): Sampling frequency of the EEG signal.
+    Returns:
+      - list: A list of tuples representing detected spindle events.
+    '''
     b, a = butter(4, [11/(sf/2), 16/(sf/2)], btype='band')
     spindle_events = []
     for epoch in x:
@@ -55,6 +69,12 @@ def detect_spindles_raw(x, sf=100):
     return spindle_events
 
 def spindle_features_for_epoch(events, sf=100):
+    '''Extract features from detected spindle events for a single epoch.
+    Parameters:
+      - events (list): List of tuples representing detected spindle events.
+      - sf (int): Sampling frequency of the EEG signal.
+    Returns:
+      - list: A list containing the count of spindles and their average duration.'''
     count = len(events)
     if count == 0:
         return [0, 0]
@@ -65,6 +85,13 @@ def spindle_features_for_epoch(events, sf=100):
 # 3. Slow waves
 # ============================
 def detect_slow_waves_raw(x, sf=100):
+    '''Detect slow waves in EEG epochs using band-pass filtering and zero-crossing analysis.
+    Parameters:
+      - x (np.ndarray): Input EEG epochs of shape (n_epochs, n_samples).
+      - sf (int): Sampling frequency of the EEG signal.
+    Returns:
+      - list: A list of tuples representing detected slow wave events.
+    '''
     b, a = butter(4, [0.5/(sf/2), 2/(sf/2)], btype='band')
     slow_events = []
     for epoch in x:
@@ -83,6 +110,11 @@ def detect_slow_waves_raw(x, sf=100):
     return slow_events
 
 def slow_wave_features_for_epoch(events):
+    '''Extract features from detected slow wave events for a single epoch.
+    Parameters:
+      - events (list): List of tuples representing detected slow wave events.
+    Returns:
+      - list: A list containing the count of slow waves and their average amplitude.'''
     if len(events) == 0:
         return [0, 0]
     amps = [e[2] for e in events]
@@ -92,6 +124,12 @@ def slow_wave_features_for_epoch(events):
 # 4. Time, PSD, Hjorth, etc.
 # ============================
 def extract_time_features(epoch):
+    '''Extract time-domain features from a single EEG epoch.
+    Parameters:
+      - epoch (np.ndarray): A single EEG epoch.
+    Returns:
+      - list: A list containing the extracted time-domain features.
+    '''
     mean_val = np.mean(epoch)
     std_val = np.std(epoch)
     skew_val = skew(epoch)
@@ -100,6 +138,14 @@ def extract_time_features(epoch):
     return [mean_val, std_val, skew_val, kurt_val, zero_crosses]
 
 def extract_frequency_features(freqs, psd, EEG_BANDS):
+    '''Extract frequency-domain features from the power spectral density (PSD) of a single EEG epoch.
+    Parameters:
+      - freqs (np.ndarray): Frequencies corresponding to the PSD values.
+      - psd (np.ndarray): Power spectral density values.
+      - EEG_BANDS (dict): Dictionary defining EEG frequency bands.
+    Returns:
+      - tuple: A tuple containing the spectral entropy, band powers, and total power.
+    '''
     psd_norm = psd / np.sum(psd)
     spec_entropy = entropy(psd_norm)
     band_powers = []
@@ -110,6 +156,13 @@ def extract_frequency_features(freqs, psd, EEG_BANDS):
     return spec_entropy, band_powers, total_power
 
 def extract_spectral_fine_structure(freqs, psd):
+    '''Extract fine spectral structure features from the power spectral density (PSD) of a single EEG epoch.
+    Parameters:
+      - freqs (np.ndarray): Frequencies corresponding to the PSD values.
+      - psd (np.ndarray): Power spectral density values.
+    Returns:
+      - list: A list containing the extracted fine spectral structure features.
+    '''
     hf_power = np.sum(psd[(freqs >= 30) & (freqs <= 45)])
     spectral_flatness = np.exp(np.mean(np.log(psd + 1e-8))) / (np.mean(psd) + 1e-8)
     spectral_centroid = np.sum(freqs * psd) / np.sum(psd)
@@ -118,6 +171,12 @@ def extract_spectral_fine_structure(freqs, psd):
     return [hf_power, spectral_flatness, spectral_centroid, spectral_spread, slope]
 
 def extract_hjorth(epoch):
+    '''Extract Hjorth parameters (mobility and complexity) from a single EEG epoch.
+    Parameters:
+      - epoch (np.ndarray): A single EEG epoch.
+    Returns:
+      - list: A list containing the extracted Hjorth parameters (mobility and complexity).
+    '''
     dx = np.diff(epoch)
     ddx = np.diff(dx)
     var_x = np.var(epoch)
@@ -129,11 +188,24 @@ def extract_hjorth(epoch):
     return [mobility, complexity]
 
 def extract_relative_powers(band_powers, total_power):
+    '''Calculate relative power for each EEG band based on the total power.
+    Parameters:
+      - band_powers (list): List of absolute power values for each EEG band.
+      - total_power (float): Total power across all bands.
+    Returns:
+      - list: A list containing the relative power for each EEG band.
+    '''
     if total_power == 0:
         return [0] * len(band_powers)
     return [bp / total_power for bp in band_powers]
 
 def extract_features(epoch):
+    '''Extract a comprehensive set of features from a single EEG epoch, including time-domain, frequency-domain, Hjorth parameters, and spectral fine structure features.
+    Parameters:
+      - epoch (np.ndarray): A single EEG epoch.
+    Returns:
+        - list: A list containing all extracted features for the epoch.
+    '''
     features = []
     features.extend(extract_time_features(epoch))
     features.extend(extract_hjorth(epoch))
@@ -151,6 +223,13 @@ def extract_features(epoch):
 # ============================
 
 def normalize_by_subject(df, feature_cols):
+    '''Normalize features by subject using z-score normalization.
+    Parameters:
+      - df (pd.DataFrame): DataFrame containing features and subject IDs.
+      - feature_cols (list): List of feature column names to normalize.
+    Returns:
+      - pd.DataFrame: DataFrame with normalized features.
+    '''
     df_norm = df.copy()
     for col in feature_cols:
         df_norm[col] = df_norm.groupby('Subject_ID')[col].transform(zscore)
@@ -158,6 +237,12 @@ def normalize_by_subject(df, feature_cols):
     return df_norm
 
 def extract_enhanced_temporal_features(df):
+    '''Extract enhanced temporal features from the DataFrame, including lag, lead, difference, and rolling statistics.
+    Parameters:
+      - df (pd.DataFrame): DataFrame containing features and subject IDs.
+    Returns:
+      - pd.DataFrame: DataFrame with enhanced temporal features added.
+    '''
     df_new = df.copy()
     exclude_cols = ['Subject_ID', 'Dataset_Source', 'Label']
 
@@ -187,6 +272,12 @@ def extract_enhanced_temporal_features(df):
 # 6. Process one file
 # ============================
 def process_single_npz(npz_path):
+    '''Process a single .npz file containing EEG epochs and labels, extracting features and returning a DataFrame.
+    Parameters:
+      - npz_path (str): Path to the .npz file.
+    Returns:
+      - pd.DataFrame: DataFrame containing extracted features, labels, and subject information.
+    '''
     data = np.load(npz_path)
     X = data["x"]      # (epochs, 3000, 1)
     y = data["y"]      # (epochs,)

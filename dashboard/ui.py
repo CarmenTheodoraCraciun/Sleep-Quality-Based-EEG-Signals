@@ -12,25 +12,29 @@ from charts import (
     build_speed_accuracy_scatter, 
     build_hypnogram_comparison,
     build_inference_speed_chart,
+    build_model_weight_chart,
 )
         
 def render_hypnogram_discrepancy_section(df):
-    """Section 7: General vs Sequential Performance"""
-    st.header("7. General Performance vs Sequential Performance (Hypnogram)")
+    """Section 6: General vs Sequential Performance"""
+    st.header("6. General Performance vs Sequential Performance (Hypnogram)")
     st.markdown("""
     Some models excel at classifying individual sleep epochs but lose coherence when 
     evaluating the continuous sequential structure of a full hypnogram.
     """)
-    
+
     fig = build_hypnogram_comparison(df)
-    st.plotly_chart(fig, width="stretch")
-    
+    st.plotly_chart(fig, width="stretch", use_container_width=True)
+
+def render_weights_section(df):
+    st.header("7. Model Weights in Ensemble")
     st.markdown("""
-    **Observations:**
-    - **ResNet** shows a dramatic drop: 78.2% test accuracy → 50.0% hypnogram accuracy
-    - **Tree-based models** (XGB, LGBM) excel on hypnogram, reaching 80-82%
-    - **CNN** shows consistent performance across both metrics
+    The ensemble model combines predictions from multiple base models. The weight chart 
+    shows the contribution of each model to the final ensemble prediction.
     """)
+    
+    weights_fig = build_model_weight_chart(df)
+    st.plotly_chart(weights_fig, width="stretch", use_container_width=True)
 
 def render_speed_and_benchmark_sections(df):
     """Combine Section 4 and Section 6 in two columns"""
@@ -73,7 +77,7 @@ def render_speed_and_benchmark_sections(df):
 
 def render_model_details_section(df, architectures):
     """Enhanced model inspection with visualizations and metrics"""
-    st.header("7. Model Deep Dive")
+    st.header("8. Model Deep Dive")
     st.markdown("""
     Select a model to view its complete performance profile, confusion matrix, 
     hypnogram visualization.
@@ -358,7 +362,7 @@ def render_indepth_section(df):
     return fig
 
 def render_export_section(charts):
-    st.header("8. Export Images")
+    st.header("Export Images")
     st.markdown("Download high-resolution, print-ready PNGs of all dashboard charts.")
 
     if st.button("Export Charts"):

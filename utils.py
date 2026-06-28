@@ -148,13 +148,14 @@ class SleepDataGenerator(tf.keras.utils.PyDataset):
 @keras.saving.register_keras_serializable(package="utils")
 class Attention(layers.Layer):
     def __init__(self, units, **kwargs):
-        # AICI e cheia: primește trainable, dtype, name etc.
+        '''Custom attention layer for sequence data.'''
         super().__init__(**kwargs)
         self.units = units
         self.W = layers.Dense(units)
         self.V = layers.Dense(1)
 
     def call(self, inputs):
+        '''Compute attention weights and context vector.'''
         score = self.V(keras.activations.tanh(self.W(inputs)))
         weights = keras.activations.softmax(score, axis=1)
         context = weights * inputs
@@ -162,11 +163,21 @@ class Attention(layers.Layer):
 
 
     def get_config(self):
+        '''Return the configuration of the layer for serialization.'''
         config = super().get_config()
         config.update({"units": self.units})
         return config
     
 def categorical_focal_loss(gamma=2.0, alpha=None):
+    '''Create a categorical focal loss function.
+
+    Parameters:
+      - gamma (float): Focusing parameter for the loss function.
+      - alpha (tf.Tensor or None): Class weights for the loss function.
+      
+    Returns:
+      - function: The categorical focal loss function.
+    '''
     def loss(y_true, y_pred):
         y_pred = ops.clip(y_pred, 1e-7, 1.0)
         ce = -ops.sum(y_true * ops.log(y_pred), axis=-1)
@@ -207,6 +218,16 @@ def se_feature_attention(inputs, reduction=8):
 # HMM & Viterbi Functions
 # ============================
 def compute_transition_matrix_adaptive(y, temps):
+    '''
+    Compute the transition matrix for a Hidden Markov Model (HMM) based on the provided sequence of labels and temperature parameters.
+    
+    Parameters:
+      - y (list): Sequence of labels.
+      - temps (list): Temperature parameters for each class.
+    
+    Returns:
+      - np.ndarray: The computed transition matrix.
+    '''
     A = np.ones((5, 5)) * 1e-3
     for i in range(len(y) - 1):
         A[y[i], y[i+1]] += 1
@@ -221,6 +242,17 @@ def compute_transition_matrix_adaptive(y, temps):
     return A
 
 def viterbi(proba, A):
+    '''
+    Perform Viterbi decoding to find the most likely sequence of hidden states given the observed probabilities and the transition matrix.
+    
+    Parameters:
+      - proba (np.ndarray): Observed probabilities of shape (time_steps, classes).
+      - A (np.ndarray): Transition matrix of shape (classes, classes).
+    
+    Returns:
+      - np.ndarray: The most likely sequence of hidden states.
+    '''
+
     T, C = proba.shape
     logA = np.log(A + 1e-12)
     logP = np.log(np.clip(proba, 1e-8, 1.0))
@@ -246,6 +278,16 @@ def viterbi(proba, A):
 # Median Filters & Physiological Rules
 # ============================
 def safe_medfilt(seq, center, k):
+    '''Apply a median filter to a sequence with a specified kernel size, ensuring that the filter does not exceed the bounds of the sequence.
+    
+    Parameters:
+      - seq (list or np.ndarray): Input sequence.
+      - center (int): Index of the center element.
+      - k (int): Kernel size for the median filter.
+    
+    Returns:
+      - float: The filtered value at the center position.
+    '''
     half = k // 2
     start = max(0, center - half)
     end = min(len(seq), center + half + 1)
@@ -257,6 +299,12 @@ def safe_medfilt(seq, center, k):
     return medfilt(window, kernel_size=k)[len(window)//2]
 
 def adaptive_median(seq):
+    '''Apply an adaptive median filter to a sequence based on the class of each element.
+    Parameters:
+      - seq (list or np.ndarray): Input sequence of class labels.
+    Returns:
+      - np.ndarray: The filtered sequence after applying adaptive median filtering.
+    '''
     out = seq.copy()
     for i in range(len(seq)):
         c = seq[i]
@@ -273,6 +321,12 @@ def adaptive_median(seq):
     return out
 
 def physiologic_rules(seq):
+    '''Apply physiological rules to a sequence of class labels.
+    Parameters:
+      - seq (list or np.ndarray): Input sequence of class labels.
+    Returns:
+      - np.ndarray: The sequence after applying physiological rules.
+    '''
     out = seq.copy()
     for i in range(1, len(seq)-1):
         prev, cur, nxt = seq[i-1], seq[i], seq[i+1]
@@ -299,6 +353,10 @@ def physiologic_rules(seq):
 # Callbacks
 # ============================
 def make_callbacks():
+    '''Create a list of Keras callbacks for model training, including early stopping and learning rate reduction on plateau
+    Returns:
+      - list: A list of Keras callbacks.
+    '''
     return [
         tf.keras.callbacks.EarlyStopping(
             monitor='val_accuracy',
@@ -316,6 +374,10 @@ def make_callbacks():
     ]
 
 def make_callbacks_seqsleepnet():
+    '''Create a list of Keras callbacks for model training, specifically for SeqSleepNet, including early stopping and learning rate reduction on plateau
+    Returns:
+        - list: A list of Keras callbacks.
+    '''
     return [
         tf.keras.callbacks.EarlyStopping(
             monitor='val_accuracy',
@@ -395,7 +457,19 @@ def evaluate_model(
         save_folder=None,
         model_name=None
     ):
+    '''Evaluate the model's performance by calculating accuracy, Cohen's Kappa, and generating a confusion matrix.
 
+    Parameters:
+      - y_true (array): True labels.
+      - y_pred (array): Predicted labels.
+      - class_names (list, optional): Names of the classes.
+      - disable_view (bool, optional): Whether to disable visualization.
+      - save_folder (str, optional): Path to save the confusion matrix.
+      - model_name (str, optional): Name of the model.
+
+    Returns:
+      - tuple: A tuple containing accuracy, Cohen's Kappa, and the save path.
+    '''
     acc = accuracy_score(y_true, y_pred)
     kappa = cohen_kappa_score(y_true, y_pred)
 

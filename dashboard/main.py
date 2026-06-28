@@ -18,6 +18,7 @@ from ui import (
     render_title,
     render_speed_and_benchmark_sections,
     render_hypnogram_discrepancy_section,
+    render_weights_section,
     render_model_details_section,
 )
 
@@ -217,6 +218,9 @@ def create_dashboard():
     st.divider()
     
     render_hypnogram_discrepancy_section(df)
+    st.divider()
+
+    render_weights_section(df)
     st.divider()
     
     render_model_details_section(df, architectures)

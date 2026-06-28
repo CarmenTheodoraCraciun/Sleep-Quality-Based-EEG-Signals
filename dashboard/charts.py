@@ -1,7 +1,10 @@
+from pathlib import Path
+
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
-from constants import DEFAULT_BG, DEFAULT_FONT_COLOR, PERFORMANCE_COLORS
+import pandas as pd
+from constants import DEFAULT_BG, DEFAULT_FONT_COLOR, PERFORMANCE_COLORS, COLOR_PALETTE
 
 MODEL_FULL_NAMES = {
     "LGBM": "LightGBM",
@@ -77,7 +80,7 @@ def build_hypnogram_comparison(df):
         name="Test Accuracy",
         x=df_sorted["name"],
         y=df_sorted["test_acc"],
-        marker_color="#0077BB",
+        marker_color=COLOR_PALETTE[0],
         text=df_sorted["test_acc"].round(3),
         textposition="outside"
     ))
@@ -87,7 +90,7 @@ def build_hypnogram_comparison(df):
         name="Hypnogram Accuracy",
         x=df_sorted["name"],
         y=df_sorted["hypno_acc"],
-        marker_color="#EE7733",
+        marker_color=COLOR_PALETTE[2],
         text=df_sorted["hypno_acc"].round(3),
         textposition="outside"
     ))
@@ -102,7 +105,45 @@ def build_hypnogram_comparison(df):
     )
     return style_figure(fig)
 
-# charts.py - build_inference_speed_chart actualizată
+def build_model_weight_chart(df=None):
+    """Pie chart showing the ensemble weights assigned to each model."""
+    weights_path = Path(__file__).resolve().parent / "results" / "ensemble_weights.csv"
+
+    if not weights_path.exists():
+        fig = go.Figure()
+        fig.update_layout(title="Ensemble Model Weights")
+        return style_figure(fig)
+
+    weights_df = pd.read_csv(weights_path)
+    if "weight" not in weights_df.columns or "model_name" not in weights_df.columns:
+        fig = go.Figure()
+        fig.update_layout(title="Ensemble Model Weights")
+        return style_figure(fig)
+
+    weights_df = weights_df.dropna(subset=["weight", "model_name"]).copy()
+    weights_df["weight"] = pd.to_numeric(weights_df["weight"], errors="coerce")
+    weights_df = weights_df.dropna(subset=["weight"]).sort_values("weight", ascending=False)
+
+    if df is not None and "name" in df.columns:
+        available_names = {str(name) for name in df["name"].dropna().astype(str)}
+        weights_df = weights_df[weights_df["model_name"].astype(str).isin(available_names)].copy()
+
+    if weights_df.empty:
+        fig = go.Figure()
+        fig.update_layout(title="Ensemble Model Weights")
+        return style_figure(fig)
+
+    fig = px.pie(
+        weights_df,
+        names=weights_df["model_name"].astype(str),
+        values=weights_df["weight"],
+        title="Ensemble Model Weights",
+        hole=0.35,
+        color_discrete_sequence=COLOR_PALETTE,
+    )
+    fig.update_traces(textinfo="percent+label", textposition="inside", textfont=dict(size=11))
+    fig.update_layout(height=360, margin=dict(t=40, b=20, l=20, r=20), showlegend=True)
+    return style_figure(fig)
 
 def build_inference_speed_chart(df):
     """Horizontal bar chart for inference speed - compact version"""
@@ -111,13 +152,13 @@ def build_inference_speed_chart(df):
     colors = []
     for _, row in df_sorted.iterrows():
         if row["gen_time"] < 1:
-            colors.append("#00CC96")
+            colors.append(COLOR_PALETTE[2])
         elif row["gen_time"] < 5:
-            colors.append("#1f77b4")
+            colors.append(COLOR_PALETTE[0])
         elif row["gen_time"] < 10:
-            colors.append("#ff7f0e")
+            colors.append(COLOR_PALETTE[1])
         else:
-            colors.append("#d62728")
+            colors.append(COLOR_PALETTE[5])
     
     fig = go.Figure(go.Bar(
         y=df_sorted["name"],
@@ -134,7 +175,7 @@ def build_inference_speed_chart(df):
     fig.add_vline(
         x=10, 
         line_dash="dash", 
-        line_color="red",
+        line_color=COLOR_PALETTE[5],
         line_width=2,
         annotation_text="⏱️ 10s Budget",
         annotation_position="top right",

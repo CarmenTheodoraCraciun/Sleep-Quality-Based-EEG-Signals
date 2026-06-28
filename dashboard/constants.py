@@ -8,12 +8,13 @@ ARCHITECTURE_PATH = BASE_DIR / "results" / "architectures.json"
 EXPORT_FOLDER = BASE_DIR.parent / "charts_export"
 
 COLOR_PALETTE = [
-    "#0077BB",  # Deep Sky Blue
-    "#EE7733",  # Vibrant Orange
+    "#0077BB",  # Blue
+    "#EE7733",  # Orange
     "#009988",  # Teal
-    "#EE3377",  # Magenta
-    "#CCBB44",  # Goldenrod
-    "#33BBEE",  # Cyan
+    "#EE3377",  # Pink
+    "#00b09b",  # Teal 2
+    "#f5576c",  # Red
+    "#4facfe",  # Sky
 ]
 
 PERFORMANCE_COLORS = {
@@ -21,11 +22,12 @@ PERFORMANCE_COLORS = {
     "DL": "#EE7733",
     "ANN_Raw": "#009988",
     "Probabilistic": "#EE3377",
-    "Hybrid": "#CCBB44",
-    "Ensemble": "#33BBEE"
+    "Hybrid": "#00b09b",
+    "Ensemble": "#f5576c"
 }
 
 HIGH_CONTRAST_PALETTE = [COLOR_PALETTE[0], COLOR_PALETTE[1], COLOR_PALETTE[2]]
+ACADEMIC_PALETTE = COLOR_PALETTE
 DEFAULT_BG = "white"
 DEFAULT_FONT_COLOR = "black"
 

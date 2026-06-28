@@ -49,8 +49,11 @@ def load_data(path=DATA_PATH):
 
 @st.cache_data
 def load_architectures(path=ARCHITECTURE_PATH):
+    """Load model architecture metadata if an architectures file exists."""
     try:
-        with open(path, "r") as file:
+        with open(path, "r", encoding="utf-8") as file:
             return json.load(file)
     except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
         return {}

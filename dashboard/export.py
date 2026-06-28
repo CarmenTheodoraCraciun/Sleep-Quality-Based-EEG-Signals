@@ -1,6 +1,4 @@
 import os
-from pathlib import Path
-
 import plotly.express as px
 
 from charts import (
