@@ -1,17 +1,21 @@
 # Machine Learning Systems for Sleep Quality Assessment Based on EEG Signals
 
-**Domain:** Biomedical Signal Processing, Deep Learning in Healthcare, Medical Cybernetics, and MLOps  
+This repository implements a production-grade, end-to-end Machine Learning (ML) and Deep Learning (DL) engineering pipeline dedicated to **automated sleep stage classification and holistic sleep quality assessment using single-channel electroencephalogram (EEG) signals**. 
 
----
+**Domain:** Biomedical Signal Processing, Deep Learning in Healthcare, Medical Cybernetics, and MLOps  
 
 ## Project Overview
 
-This repository implements a production-grade, end-to-end Machine Learning (ML) and Deep Learning (DL) engineering pipeline dedicated to **automated sleep stage classification and holistic sleep quality assessment using single-channel electroencephalogram (EEG) signals**. 
-
 ### Key Capabilities & Engineering Highlights
-* Integrates traditional probabilistic estimators (Logistic Regression, LDA), robust tree-based ensembles (Random Forest, XGBoost, LightGBM), deep neural networks (1D-CNN on raw signals, MLP, Deep ResNet, LSTM), and sequence-to-sequence structures (SeqSleepNet).
 * **Feature Engineering:** Implements mathematical extractions across the time domain, frequency domain, and spectral entropy distribution to represent macro- and micro-architectures of clinical sleep stages.
+* Integrates traditional probabilistic estimators (Logistic Regression, LDA), robust tree-based ensembles (Random Forest, XGBoost, LightGBM), deep neural networks (1D-CNN on raw signals, MLP, Deep ResNet, LSTM), and sequence-to-sequence structures (SeqSleepNet).
 * **Interactive MLOps Dashboard:** A custom-built Streamlit analytical platform that displays comparative performance tables, multi-class confusion matrices, latency vs. accuracy Pareto optimal fronts, and dynamic patient hypnograms.
+
+## Links:
+
+* [GitHub Repository](https://github.com/CarmenTheodoraCraciun/Sleep-Quality-Based-EEG-Signals)
+* [Hugging Face downloaded databases](https://huggingface.co/datasets/carmentheodora/Sleep_Quality_Datasets)
+
 
 ---
 
@@ -73,31 +77,60 @@ To guarantee maximum robustness across diverse demographic cohorts and pathologi
 The system is built as a sequential dependency pipeline. To properly execute, reproduce, or audit the code, steps must follow this exact order:
 
 ```text
-[Step 1: ETL Notebooks] ➔ [Step 2: Feature Extraction] ➔ [Step 3: Model Training]
-                                                                  │
-[Step 6: Dashboard Run] ◀ [Step 5: Hypnograms & HMM] ◀ [Step 4: Cross-Val & Holdout]
+[Step 1: ETL Notebooks]
+[Step 2: Feature Extraction]
+[Step 3: Model Training]
+[Step 4: Cross-Val & Holdout]
+[Step 5: Hypnograms]
+[Step 6: Dashboard Run]
 
 ```
 
 ### Detailed Execution Manual
 
 1. **Data Cleaning & Ingestion (`notebooks/ELT_feature_extraction/` Notebooks 1-4):**
-Ingests raw European Data Format (`.edf`) signal streams, parses clinical annotations, filters high-frequency noise using bandpass filters, and splits continuous signals into distinct 30-second epochs. Output is written to local binary `.npz` storage tensors.
+* Ingests raw European Data Format (`.edf`) signal streams, parses clinical annotations, filters high-frequency noise using bandpass filters, and splits continuous signals into distinct 30-second epochs. Output is written to local binary `.npz` storage tensors.
 2. **Feature Extraction Pipeline (`notebooks/ELT_feature_extraction/5_Feature_extraction.ipynb`):**
 Processes epochs using `feature_extraction_pipeline.py` to extract a multi-dimensional feature space covering:
 * *Time Domain:* Mean, standard deviation, skewness, kurtosis, Hjorth mobility, and complexity.
 * *Frequency Domain:* Power Spectral Density (PSD) metrics computed via Welch's method across traditional bands ($\delta$: 0.5-4Hz, $\theta$: 4-8Hz, $\alpha$: 8-12Hz, $\beta$: 12-30Hz, $\gamma$: 30-45Hz).
 * *Spectral Metrics:* Spectral Entropy, spectral edge frequency, and relative power ratios.
-
-
 3. **Standalone Model Training (`notebooks/Models/`):**
-Can be run completely independently or concurrently. Notebooks optimize hyperparameter configurations for classical classifiers, tree boosting, and deep neural structures.
+* Can be run completely independently or concurrently. Notebooks optimize hyperparameter configurations for classical classifiers, tree boosting, and deep neural structures.
 4. **Validation and Holdout Auditing (`Cross_Validation.ipynb` and `Holdout_Test.ipynb`):**
-Runs a 5-fold cross-validation check on the training subset to record statistical error metrics. Next, `Holdout_Test.ipynb` must be executed to evaluate the locked model states against the untouched $15\%$ test matrix, generating final metrics and multi-class confusion matrices.
+* Runs a 5-fold cross-validation check on the training subset to record statistical error metrics. Next, `Holdout_Test.ipynb` must be executed to evaluate the locked model states against the untouched $15\%$ test matrix, generating final metrics and multi-class confusion matrices.
 5. **Continuous Hypnogram Synthesis (`Hypnograms_Generation.ipynb`):**
-Processes full-night clinical data sequentially. It passes local classifications into a Hidden Markov Model (HMM) running the Viterbi algorithm to smooth out biologically impossible transitions (such as jumping instantly from Deep Sleep N3 directly into a Wake state within a 30-second window).
+* Processes full-night clinical data sequentially. It passes local classifications into a Hidden Markov Model (HMM) running the Viterbi algorithm to smooth out biologically impossible transitions (such as jumping instantly from Deep Sleep N3 directly into a Wake state within a 30-second window).
 6. **Dashboard UI Launch (`dashboard/main.py`):**
-Launches the Streamlit framework. It pulls raw analytics dynamically from `dashboard/results/` to render all charts, tables, and comparative analyses.
+* Launches the Streamlit framework. It pulls raw analytics dynamically from `dashboard/results/` to render all charts, tables, and comparative analyses.
+
+---
+
+## Deployment & Installation Guide
+
+### System Prerequisites
+
+Ensure your host machine runs Python $\ge 3.9$ alongside an active environment isolation manager (`venv` or `conda`).
+
+### Step 1: Clone Repository & Isolate Environment
+
+### Step 2: Install Project Dependencies
+
+```bash
+pip install -r requirements.txt
+
+```
+
+### Step 3: Run the Streamlit Clinical Dashboard
+
+To launch the interactive user interface using the pre-compiled evaluation artifacts, execute:
+
+```bash
+streamlit run dashboard/main.py
+
+```
+
+*Note: If you re-run or retrain the system using different configurations in the notebooks, the dashboard automatically updates its visualization metrics based on the newly saved CSV tables and image outputs.*
 
 ---
 
@@ -150,29 +183,3 @@ An examination of individual stage classification behaviors highlights key clini
 * **Deep Sleep N3 (5,058 correct) & REM Sleep (6,288 correct):** These stages demonstrate clear separation lines and minimal cross-contamination, satisfying strict clinical diagnostics criteria.
 
 ---
-
-## Deployment & Installation Guide
-
-### System Prerequisites
-
-Ensure your host machine runs Python $\ge 3.9$ alongside an active environment isolation manager (`venv` or `conda`).
-
-### Step 1: Clone Repository & Isolate Environment
-
-### Step 2: Install Project Dependencies
-
-```bash
-pip install -r requirements.txt
-
-```
-
-### Step 3: Run the Streamlit Clinical Dashboard
-
-To launch the interactive user interface using the pre-compiled evaluation artifacts, execute:
-
-```bash
-streamlit run dashboard/main.py
-
-```
-
-*Note: If you re-run or retrain the system using different configurations in the notebooks, the dashboard automatically updates its visualization metrics based on the newly saved CSV tables and image outputs.*
