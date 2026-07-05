@@ -56,7 +56,7 @@ def build_speed_accuracy_scatter(df):
                      y="test_acc",
                      color="type",
                      text="name",
-                     hover_data=["hypno_acc", "test_kappa"],
+                     hover_data=["hypno_acc", "hypno_acc"],
                      title="Speed vs Accuracy: Inference Time vs Test Accuracy",
                      color_discrete_map=PERFORMANCE_COLORS,
                      labels={"gen_time": "Generation Time (s)", 
