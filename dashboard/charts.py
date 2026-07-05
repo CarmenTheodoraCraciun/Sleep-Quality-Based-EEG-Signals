@@ -56,11 +56,11 @@ def build_speed_accuracy_scatter(df):
                      y="test_acc",
                      color="type",
                      text="name",
-                     hover_data=["hypno_acc", "hypno_acc"],
+                     hover_data=["gen_time", "hypno_acc"],
                      title="Speed vs Accuracy: Inference Time vs Test Accuracy",
                      color_discrete_map=PERFORMANCE_COLORS,
                      labels={"gen_time": "Generation Time (s)", 
-                            "test_acc": "Test Accuracy"})
+                            "hypno_acc": "Hypnogram Accuracy"})
     
     fig.update_traces(textposition="top center", marker=dict(size=15))
     fig.update_layout(
