@@ -54,7 +54,6 @@ def render_speed_and_benchmark_sections(df):
         st.markdown("""
         **Key Insights:**
         - **Sweet Spot**: Top-left quadrant (fast & accurate)
-        - **LSTM_ResNet**: 0.798 accuracy in 0.386s
         - **SSN**: Good accuracy but slow (98s)
         """)
     
@@ -70,7 +69,6 @@ def render_speed_and_benchmark_sections(df):
         
         st.markdown("""
         **Deployment Recommendations:**
-        - **Wearable (< 1s)**: LSTM_ResNet, CNN, XGB
         - **Server (< 10s)**: Most models
         - **Batch**: SSN (98s) for max accuracy
         """)

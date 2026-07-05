@@ -17,7 +17,6 @@ MODEL_FULL_NAMES = {
     "ResNet": "Residual Neural Network",
     "CNN": "Convolution Neural Network",
     "SSN": "SeqSleepNet",
-    "LSTM_ResNet": "LSTM + ResNet"
 }
 
 def get_full_name(short_name):
